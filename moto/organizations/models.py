@@ -20,6 +20,8 @@ from moto.organizations.exceptions import (
     PolicyTypeNotEnabledException,
     TargetNotFoundException,
 )
+from moto.utilities.paginator import paginate
+from .utils import PAGINATION_MODEL
 
 
 class FakeOrganization(BaseModel):
@@ -379,7 +381,7 @@ class OrganizationsBackend(BaseBackend):
             raise AWSOrganizationsNotInUseException
         return self.org.describe()
 
-    def delete_organization(self, **kwargs):
+    def delete_organization(self):
         if [account for account in self.accounts if account.name != "master"]:
             raise RESTError(
                 "OrganizationNotEmptyException",
@@ -495,8 +497,11 @@ class OrganizationsBackend(BaseBackend):
             next_token = str(len(accounts_resp))
         return dict(CreateAccountStatuses=accounts_resp, NextToken=next_token)
 
+    @paginate(pagination_model=PAGINATION_MODEL)
     def list_accounts(self):
-        return dict(Accounts=[account.describe() for account in self.accounts])
+        accounts = [account.describe() for account in self.accounts]
+        accounts = sorted(accounts, key=lambda x: x["JoinedTimestamp"])
+        return accounts
 
     def list_accounts_for_parent(self, **kwargs):
         parent_id = self.validate_parent_id(kwargs["ParentId"])
@@ -612,7 +617,7 @@ class OrganizationsBackend(BaseBackend):
         else:
             raise InvalidInputException("You specified an invalid value.")
 
-    def list_policies(self, **kwargs):
+    def list_policies(self):
         return dict(
             Policies=[p.describe()["Policy"]["PolicySummary"] for p in self.policies]
         )
@@ -822,7 +827,7 @@ class OrganizationsBackend(BaseBackend):
             )
 
         admin = next(
-            (admin for admin in self.admins if admin.account.id == account_id), None,
+            (admin for admin in self.admins if admin.account.id == account_id), None
         )
         if admin is None:
             account = next(
@@ -878,7 +883,7 @@ class OrganizationsBackend(BaseBackend):
                 )
         elif re.match(account_id_regex, target_id):
             account = next(
-                (account for account in self.accounts if account.id == target_id), None,
+                (account for account in self.accounts if account.id == target_id), None
             )
             if account is not None:
                 if policy in account.attached_policies:

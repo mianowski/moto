@@ -332,7 +332,7 @@ def test_delete_versioned_objects():
     s3.put_object(Bucket=bucket, Key=key, Body=b"")
 
     s3.put_bucket_versioning(
-        Bucket=bucket, VersioningConfiguration={"Status": "Enabled"},
+        Bucket=bucket, VersioningConfiguration={"Status": "Enabled"}
     )
 
     objects = s3.list_objects_v2(Bucket=bucket).get("Contents")
@@ -353,9 +353,7 @@ def test_delete_versioned_objects():
     versions.shouldnt.be.empty
     delete_markers.shouldnt.be.empty
 
-    s3.delete_object(
-        Bucket=bucket, Key=key, VersionId=versions[0].get("VersionId"),
-    )
+    s3.delete_object(Bucket=bucket, Key=key, VersionId=versions[0].get("VersionId"))
 
     objects = s3.list_objects_v2(Bucket=bucket).get("Contents")
     versions = s3.list_object_versions(Bucket=bucket).get("Versions")
@@ -366,7 +364,7 @@ def test_delete_versioned_objects():
     delete_markers.shouldnt.be.empty
 
     s3.delete_object(
-        Bucket=bucket, Key=key, VersionId=delete_markers[0].get("VersionId"),
+        Bucket=bucket, Key=key, VersionId=delete_markers[0].get("VersionId")
     )
 
     objects = s3.list_objects_v2(Bucket=bucket).get("Contents")
@@ -876,22 +874,17 @@ def test_bucket_location_nondefault():
     )
 
 
-# Test uses current Region to determine whether to throw an error
-# Region is retrieved based on current URL
-# URL will always be localhost in Server Mode, so can't run it there
-if not settings.TEST_SERVER_MODE:
+@mock_s3
+def test_s3_location_should_error_outside_useast1():
+    s3 = boto3.client("s3", region_name="eu-west-1")
 
-    @mock_s3
-    def test_s3_location_should_error_outside_useast1():
-        s3 = boto3.client("s3", region_name="eu-west-1")
+    bucket_name = "asdfasdfsdfdsfasda"
 
-        bucket_name = "asdfasdfsdfdsfasda"
-
-        with pytest.raises(ClientError) as e:
-            s3.create_bucket(Bucket=bucket_name)
-        e.value.response["Error"]["Message"].should.equal(
-            "The unspecified location constraint is incompatible for the region specific endpoint this request was sent to."
-        )
+    with pytest.raises(ClientError) as e:
+        s3.create_bucket(Bucket=bucket_name)
+    e.value.response["Error"]["Message"].should.equal(
+        "The unspecified location constraint is incompatible for the region specific endpoint this request was sent to."
+    )
 
 
 @mock_s3
@@ -1078,7 +1071,7 @@ def test_list_objects_truncated_response():
 
     assert listed_object["Key"] == "one"
     assert resp["MaxKeys"] == 1
-    assert resp["IsTruncated"] == True
+    assert resp["IsTruncated"] is True
     assert resp.get("Prefix") is None
     assert resp.get("Delimiter") is None
     assert "NextMarker" in resp
@@ -1091,7 +1084,7 @@ def test_list_objects_truncated_response():
 
     assert listed_object["Key"] == "three"
     assert resp["MaxKeys"] == 1
-    assert resp["IsTruncated"] == True
+    assert resp["IsTruncated"] is True
     assert resp.get("Prefix") is None
     assert resp.get("Delimiter") is None
     assert "NextMarker" in resp
@@ -1104,7 +1097,7 @@ def test_list_objects_truncated_response():
 
     assert listed_object["Key"] == "two"
     assert resp["MaxKeys"] == 1
-    assert resp["IsTruncated"] == False
+    assert resp["IsTruncated"] is False
     assert resp.get("Prefix") is None
     assert resp.get("Delimiter") is None
     assert "NextMarker" not in resp
@@ -1123,7 +1116,7 @@ def test_list_keys_xml_escaped():
     assert resp["KeyCount"] == 1
     assert resp["MaxKeys"] == 1000
     assert resp["Prefix"] == key_name
-    assert resp["IsTruncated"] == False
+    assert resp["IsTruncated"] is False
     assert "Delimiter" not in resp
     assert "StartAfter" not in resp
     assert "NextContinuationToken" not in resp
@@ -1201,7 +1194,7 @@ def test_list_objects_v2_truncated_response():
     assert resp["MaxKeys"] == 1
     assert resp["Prefix"] == ""
     assert resp["KeyCount"] == 1
-    assert resp["IsTruncated"] == True
+    assert resp["IsTruncated"] is True
     assert "Delimiter" not in resp
     assert "StartAfter" not in resp
     assert "Owner" not in listed_object  # owner info was not requested
@@ -1218,7 +1211,7 @@ def test_list_objects_v2_truncated_response():
     assert resp["MaxKeys"] == 1
     assert resp["Prefix"] == ""
     assert resp["KeyCount"] == 1
-    assert resp["IsTruncated"] == True
+    assert resp["IsTruncated"] is True
     assert "Delimiter" not in resp
     assert "StartAfter" not in resp
     assert "Owner" not in listed_object
@@ -1235,7 +1228,7 @@ def test_list_objects_v2_truncated_response():
     assert resp["MaxKeys"] == 1
     assert resp["Prefix"] == ""
     assert resp["KeyCount"] == 1
-    assert resp["IsTruncated"] == False
+    assert resp["IsTruncated"] is False
     assert "Delimiter" not in resp
     assert "Owner" not in listed_object
     assert "StartAfter" not in resp
@@ -1258,7 +1251,7 @@ def test_list_objects_v2_truncated_response_start_after():
     assert resp["MaxKeys"] == 1
     assert resp["Prefix"] == ""
     assert resp["KeyCount"] == 1
-    assert resp["IsTruncated"] == True
+    assert resp["IsTruncated"] is True
     assert resp["StartAfter"] == "one"
     assert "Delimiter" not in resp
     assert "Owner" not in listed_object
@@ -1276,7 +1269,7 @@ def test_list_objects_v2_truncated_response_start_after():
     assert resp["MaxKeys"] == 1
     assert resp["Prefix"] == ""
     assert resp["KeyCount"] == 1
-    assert resp["IsTruncated"] == False
+    assert resp["IsTruncated"] is False
     # When ContinuationToken is given, StartAfter is ignored. This also means
     # AWS does not return it in the response.
     assert "StartAfter" not in resp
@@ -1543,7 +1536,7 @@ def test_delete_versioned_bucket_returns_meta():
     del_resp2 = client.delete_object(
         Bucket="blah", Key="test1", VersionId=del_resp["VersionId"]
     )
-    assert del_resp2["DeleteMarker"] == True
+    assert del_resp2["DeleteMarker"] is True
     assert "VersionId" not in del_resp2
 
 
@@ -1599,9 +1592,7 @@ def test_get_object_if_match():
     s3.put_object(Bucket=bucket_name, Key=key, Body="test")
 
     with pytest.raises(botocore.exceptions.ClientError) as err:
-        s3.get_object(
-            Bucket=bucket_name, Key=key, IfMatch='"hello"',
-        )
+        s3.get_object(Bucket=bucket_name, Key=key, IfMatch='"hello"')
     e = err.value
     e.response["Error"]["Code"].should.equal("PreconditionFailed")
     e.response["Error"]["Condition"].should.equal("If-Match")
@@ -1618,9 +1609,7 @@ def test_get_object_if_none_match():
     etag = s3.put_object(Bucket=bucket_name, Key=key, Body="test")["ETag"]
 
     with pytest.raises(botocore.exceptions.ClientError) as err:
-        s3.get_object(
-            Bucket=bucket_name, Key=key, IfNoneMatch=etag,
-        )
+        s3.get_object(Bucket=bucket_name, Key=key, IfNoneMatch=etag)
     e = err.value
     e.response["Error"].should.equal({"Code": "304", "Message": "Not Modified"})
 
@@ -1676,9 +1665,7 @@ def test_head_object_if_match():
     s3.put_object(Bucket=bucket_name, Key=key, Body="test")
 
     with pytest.raises(botocore.exceptions.ClientError) as err:
-        s3.head_object(
-            Bucket=bucket_name, Key=key, IfMatch='"hello"',
-        )
+        s3.head_object(Bucket=bucket_name, Key=key, IfMatch='"hello"')
     e = err.value
     e.response["Error"].should.equal({"Code": "412", "Message": "Precondition Failed"})
 
@@ -1694,9 +1681,7 @@ def test_head_object_if_none_match():
     etag = s3.put_object(Bucket=bucket_name, Key=key, Body="test")["ETag"]
 
     with pytest.raises(botocore.exceptions.ClientError) as err:
-        s3.head_object(
-            Bucket=bucket_name, Key=key, IfNoneMatch=etag,
-        )
+        s3.head_object(Bucket=bucket_name, Key=key, IfNoneMatch=etag)
     e = err.value
     e.response["Error"].should.equal({"Code": "304", "Message": "Not Modified"})
 

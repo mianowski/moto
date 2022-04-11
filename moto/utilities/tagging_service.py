@@ -45,6 +45,8 @@ class TaggingService:
 
         Note: the storage is internal to this class instance.
         """
+        if not tags:
+            return
         if arn not in self.tags:
             self.tags[arn] = {}
         for tag in tags:
@@ -167,7 +169,7 @@ class TaggingService:
 
     @staticmethod
     def convert_dict_to_tags_input(tags):
-        """ Given a dictionary, return generic boto params for tags """
+        """Given a dictionary, return generic boto params for tags"""
         if not tags:
             return []
         return [{"Key": k, "Value": v} for (k, v) in tags.items()]

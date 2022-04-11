@@ -3,22 +3,23 @@ import pytest
 import sure  # noqa # pylint: disable=unused-import
 from moto import mock_s3
 from moto import settings
-from os import environ
 from unittest import SkipTest
 
 
 @pytest.fixture(scope="function")
-def aws_credentials():
+def aws_credentials(monkeypatch):
     if settings.TEST_SERVER_MODE:
         raise SkipTest("No point in testing this in ServerMode.")
     """Mocked AWS Credentials for moto."""
-    environ["AWS_ACCESS_KEY_ID"] = "testing"
-    environ["AWS_SECRET_ACCESS_KEY"] = "testing"
-    environ["AWS_SECURITY_TOKEN"] = "testing"
-    environ["AWS_SESSION_TOKEN"] = "testing"
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "testing")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "testing")
+    monkeypatch.setenv("AWS_SECURITY_TOKEN", "testing")
+    monkeypatch.setenv("AWS_SESSION_TOKEN", "testing")
 
 
-def test_mock_works_with_client_created_inside(aws_credentials):
+def test_mock_works_with_client_created_inside(
+    aws_credentials,
+):  # pylint: disable=unused-argument
     m = mock_s3()
     m.start()
     client = boto3.client("s3", region_name="us-east-1")
@@ -28,7 +29,9 @@ def test_mock_works_with_client_created_inside(aws_credentials):
     m.stop()
 
 
-def test_mock_works_with_client_created_outside(aws_credentials):
+def test_mock_works_with_client_created_outside(
+    aws_credentials,
+):  # pylint: disable=unused-argument
     # Create the boto3 client first
     outside_client = boto3.client("s3", region_name="us-east-1")
 
@@ -46,7 +49,9 @@ def test_mock_works_with_client_created_outside(aws_credentials):
     m.stop()
 
 
-def test_mock_works_with_resource_created_outside(aws_credentials):
+def test_mock_works_with_resource_created_outside(
+    aws_credentials,
+):  # pylint: disable=unused-argument
     # Create the boto3 client first
     outside_resource = boto3.resource("s3", region_name="us-east-1")
 
@@ -88,7 +93,9 @@ class ImportantBusinessLogic:
         return self._s3.list_buckets()["Buckets"]
 
 
-def test_mock_works_when_replacing_client(aws_credentials):
+def test_mock_works_when_replacing_client(
+    aws_credentials,
+):  # pylint: disable=unused-argument
 
     logic = ImportantBusinessLogic()
 

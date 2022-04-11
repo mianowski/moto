@@ -92,7 +92,7 @@ class InvalidVPCIdError(EC2ClientError):
     def __init__(self, vpc_id):
 
         super().__init__(
-            "InvalidVpcID.NotFound", "VpcID {0} does not exist.".format(vpc_id),
+            "InvalidVpcID.NotFound", "VpcID {0} does not exist.".format(vpc_id)
         )
 
 
@@ -277,10 +277,9 @@ class MalformedAMIIdError(EC2ClientError):
 
 
 class InvalidSnapshotIdError(EC2ClientError):
-    def __init__(self, snapshot_id):
-        super().__init__(
-            "InvalidSnapshot.NotFound", ""
-        )  # Note: AWS returns empty message for this, as of 2014.08.22.
+    def __init__(self):
+        # Note: AWS returns empty message for this, as of 2014.08.22.
+        super().__init__("InvalidSnapshot.NotFound", "")
 
 
 class InvalidSnapshotInUse(EC2ClientError):
@@ -418,7 +417,7 @@ class InvalidDependantParameterError(EC2ClientError):
         super().__init__(
             "InvalidParameter",
             "{0} can't be empty if {1} is {2}.".format(
-                dependant_parameter, parameter, parameter_value,
+                dependant_parameter, parameter, parameter_value
             ),
         )
 
@@ -428,16 +427,14 @@ class InvalidDependantParameterTypeError(EC2ClientError):
         super().__init__(
             "InvalidParameter",
             "{0} type must be {1} if {2} is provided.".format(
-                dependant_parameter, parameter_value, parameter,
+                dependant_parameter, parameter_value, parameter
             ),
         )
 
 
 class InvalidAggregationIntervalParameterError(EC2ClientError):
     def __init__(self, parameter):
-        super().__init__(
-            "InvalidParameter", "Invalid {0}".format(parameter),
-        )
+        super().__init__("InvalidParameter", "Invalid {0}".format(parameter))
 
 
 class InvalidParameterValueError(EC2ClientError):

@@ -1,22 +1,9 @@
 """Handles incoming pinpoint requests, invokes methods, returns responses."""
 import json
 
-from functools import wraps
 from moto.core.responses import BaseResponse
 from urllib.parse import unquote
-from .exceptions import PinpointExceptions
 from .models import pinpoint_backends
-
-
-def error_handler(f):
-    @wraps(f)
-    def _wrapper(*args, **kwargs):
-        try:
-            return f(*args, **kwargs)
-        except PinpointExceptions as e:
-            return e.code, e.get_headers(), e.get_body()
-
-    return _wrapper
 
 
 class PinpointResponse(BaseResponse):
@@ -27,7 +14,6 @@ class PinpointResponse(BaseResponse):
         """Return backend instance specific for this region."""
         return pinpoint_backends[self.region]
 
-    @error_handler
     def app(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
         if request.method == "DELETE":
@@ -49,7 +35,6 @@ class PinpointResponse(BaseResponse):
         if request.method == "PUT":
             return self.update_application_settings()
 
-    @error_handler
     def eventstream(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
         if request.method == "DELETE":
@@ -77,12 +62,12 @@ class PinpointResponse(BaseResponse):
 
     def delete_app(self):
         application_id = self.path.split("/")[-1]
-        app = self.pinpoint_backend.delete_app(application_id=application_id,)
+        app = self.pinpoint_backend.delete_app(application_id=application_id)
         return 200, {}, json.dumps(app.to_json())
 
     def get_app(self):
         application_id = self.path.split("/")[-1]
-        app = self.pinpoint_backend.get_app(application_id=application_id,)
+        app = self.pinpoint_backend.get_app(application_id=application_id)
         return 200, {}, json.dumps(app.to_json())
 
     def get_apps(self):
@@ -103,7 +88,7 @@ class PinpointResponse(BaseResponse):
     def get_application_settings(self):
         application_id = self.path.split("/")[-2]
         app_settings = self.pinpoint_backend.get_application_settings(
-            application_id=application_id,
+            application_id=application_id
         )
         app_settings = app_settings.to_json()
         app_settings["ApplicationId"] = application_id
@@ -111,22 +96,20 @@ class PinpointResponse(BaseResponse):
 
     def list_tags_for_resource(self):
         resource_arn = unquote(self.path).split("/tags/")[-1]
-        tags = self.pinpoint_backend.list_tags_for_resource(resource_arn=resource_arn,)
+        tags = self.pinpoint_backend.list_tags_for_resource(resource_arn=resource_arn)
         return 200, {}, json.dumps(tags)
 
     def tag_resource(self):
         resource_arn = unquote(self.path).split("/tags/")[-1]
         tags = json.loads(self.body).get("tags", {})
-        self.pinpoint_backend.tag_resource(
-            resource_arn=resource_arn, tags=tags,
-        )
+        self.pinpoint_backend.tag_resource(resource_arn=resource_arn, tags=tags)
         return 200, {}, "{}"
 
     def untag_resource(self):
         resource_arn = unquote(self.path).split("/tags/")[-1]
         tag_keys = self.querystring.get("tagKeys")
         self.pinpoint_backend.untag_resource(
-            resource_arn=resource_arn, tag_keys=tag_keys,
+            resource_arn=resource_arn, tag_keys=tag_keys
         )
         return 200, {}, "{}"
 
@@ -145,7 +128,7 @@ class PinpointResponse(BaseResponse):
     def get_event_stream(self):
         application_id = self.path.split("/")[-2]
         event_stream = self.pinpoint_backend.get_event_stream(
-            application_id=application_id,
+            application_id=application_id
         )
         resp = event_stream.to_json()
         resp["ApplicationId"] = application_id
@@ -154,7 +137,7 @@ class PinpointResponse(BaseResponse):
     def delete_event_stream(self):
         application_id = self.path.split("/")[-2]
         event_stream = self.pinpoint_backend.delete_event_stream(
-            application_id=application_id,
+            application_id=application_id
         )
         resp = event_stream.to_json()
         resp["ApplicationId"] = application_id

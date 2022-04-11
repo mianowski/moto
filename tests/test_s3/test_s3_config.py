@@ -31,11 +31,9 @@ def test_s3_public_access_block_to_config_dict():
         .public_access_block.to_config_dict()
     )
 
-    convert_bool = lambda x: x == "True"
     for key, value in public_access_block.items():
-        assert result[
-            "{lowercase}{rest}".format(lowercase=key[0].lower(), rest=key[1:])
-        ] == convert_bool(value)
+        k = "{lowercase}{rest}".format(lowercase=key[0].lower(), rest=key[1:])
+        assert result[k] is (value == "True")
 
     # Verify that this resides in the full bucket's to_config_dict:
     full_result = s3_config_query.backends["global"].buckets["bucket1"].to_config_dict()
@@ -436,12 +434,7 @@ def test_s3_acl_to_config_dict():
 @mock_s3
 def test_s3_config_dict():
     from moto.s3.config import s3_config_query
-    from moto.s3.models import (
-        FakeAcl,
-        FakeGrant,
-        FakeGrantee,
-        OWNER,
-    )
+    from moto.s3.models import FakeAcl, FakeGrant, FakeGrantee, OWNER
 
     # Without any buckets:
     assert not s3_config_query.get_config_resource("some_bucket")

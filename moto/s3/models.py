@@ -56,6 +56,7 @@ from moto.s3.exceptions import (
     InvalidTagError,
 )
 from .cloud_formation import cfn_to_api_encryption, is_replacement_update
+from . import notifications
 from .utils import clean_key_name, _VersionedKeyStore, undo_clean_key_name
 from ..settings import get_s3_default_key_buffer_size, S3_UPLOAD_PART_MIN_SIZE
 
@@ -578,7 +579,7 @@ class LifecycleAndFilter(BaseModel):
 
         for key, value in self.tags.items():
             data.append(
-                {"type": "LifecycleTagPredicate", "tag": {"key": key, "value": value},}
+                {"type": "LifecycleTagPredicate", "tag": {"key": key, "value": value}}
             )
 
         return data
@@ -693,6 +694,33 @@ class Notification(BaseModel):
         self.arn = arn
         self.events = events
         self.filters = filters if filters else {}
+
+    def _event_matches(self, event_name):
+        if event_name in self.events:
+            return True
+        # s3:ObjectCreated:Put --> s3:ObjectCreated:*
+        wildcard = ":".join(event_name.rsplit(":")[0:2]) + ":*"
+        if wildcard in self.events:
+            return True
+        return False
+
+    def _key_matches(self, key_name):
+        if "S3Key" not in self.filters:
+            return True
+        _filters = {f["Name"]: f["Value"] for f in self.filters["S3Key"]["FilterRule"]}
+        prefix_matches = "prefix" not in _filters or key_name.startswith(
+            _filters["prefix"]
+        )
+        suffix_matches = "suffix" not in _filters or key_name.endswith(
+            _filters["suffix"]
+        )
+        return prefix_matches and suffix_matches
+
+    def matches(self, event_name, key_name):
+        if self._event_matches(event_name):
+            if self._key_matches(key_name):
+                return True
+        return False
 
     def to_config_dict(self):
         data = {}
@@ -1101,6 +1129,9 @@ class FakeBucket(CloudFormationModel):
                 if region != self.region_name:
                     raise InvalidNotificationDestination()
 
+        # Send test events so the user can verify these notifications were set correctly
+        notifications.send_test_event(bucket=self)
+
     def set_accelerate_configuration(self, accelerate_config):
         if self.accelerate_configuration is None and accelerate_config == "Suspended":
             # Cannot "suspend" a not active acceleration. Leaves it undefined
@@ -1109,8 +1140,8 @@ class FakeBucket(CloudFormationModel):
         self.accelerate_configuration = accelerate_config
 
     @classmethod
-    def has_cfn_attr(cls, attribute):
-        return attribute in [
+    def has_cfn_attr(cls, attr):
+        return attr in [
             "Arn",
             "DomainName",
             "DualStackDomainName",
@@ -1189,7 +1220,7 @@ class FakeBucket(CloudFormationModel):
 
     @classmethod
     def update_from_cloudformation_json(
-        cls, original_resource, new_resource_name, cloudformation_json, region_name,
+        cls, original_resource, new_resource_name, cloudformation_json, region_name
     ):
         properties = cloudformation_json["Properties"]
 
@@ -1464,14 +1495,7 @@ class S3Backend(BaseBackend, CloudWatchMetricProvider):
         return self.get_bucket(bucket_name).encryption
 
     def list_object_versions(
-        self,
-        bucket_name,
-        delimiter=None,
-        encoding_type=None,
-        key_marker=None,
-        max_keys=None,
-        version_id_marker=None,
-        prefix="",
+        self, bucket_name, delimiter=None, key_marker=None, prefix=""
     ):
         bucket = self.get_bucket(bucket_name)
 
@@ -1521,7 +1545,7 @@ class S3Backend(BaseBackend, CloudWatchMetricProvider):
     def put_bucket_policy(self, bucket_name, policy):
         self.get_bucket(bucket_name).policy = policy
 
-    def delete_bucket_policy(self, bucket_name, body):
+    def delete_bucket_policy(self, bucket_name):
         bucket = self.get_bucket(bucket_name)
         bucket.policy = None
 
@@ -1642,6 +1666,8 @@ class S3Backend(BaseBackend, CloudWatchMetricProvider):
         ] + [new_key]
         bucket.keys.setlist(key_name, keys)
 
+        notifications.send_event(notifications.S3_OBJECT_CREATE_PUT, bucket, new_key)
+
         return new_key
 
     def put_object_acl(self, bucket_name, key_name, acl):
@@ -1725,9 +1751,7 @@ class S3Backend(BaseBackend, CloudWatchMetricProvider):
         if errmsg:
             raise InvalidTagError(errmsg)
         self.tagger.delete_all_tags_for_resource(key.arn)
-        self.tagger.tag_resource(
-            key.arn, boto_tags_dict,
-        )
+        self.tagger.tag_resource(key.arn, boto_tags_dict)
         return key
 
     def get_bucket_tagging(self, bucket_name):
@@ -1738,7 +1762,7 @@ class S3Backend(BaseBackend, CloudWatchMetricProvider):
         bucket = self.get_bucket(bucket_name)
         self.tagger.delete_all_tags_for_resource(bucket.arn)
         self.tagger.tag_resource(
-            bucket.arn, [{"Key": key, "Value": value} for key, value in tags.items()],
+            bucket.arn, [{"Key": key, "Value": value} for key, value in tags.items()]
         )
 
     def put_object_lock_configuration(
@@ -1778,6 +1802,17 @@ class S3Backend(BaseBackend, CloudWatchMetricProvider):
         bucket.public_access_block = None
 
     def put_bucket_notification_configuration(self, bucket_name, notification_config):
+        """
+        The configuration can be persisted, but at the moment we only send notifications to the following targets:
+
+         - AWSLambda
+         - SQS
+
+        For the following events:
+
+         - 's3:ObjectCreated:Copy'
+         - 's3:ObjectCreated:Put'
+        """
         bucket = self.get_bucket(bucket_name)
         bucket.set_notification_configuration(notification_config)
 
@@ -2055,6 +2090,10 @@ class S3Backend(BaseBackend, CloudWatchMetricProvider):
         if src_key.storage_class in "GLACIER":
             # Object copied from Glacier object should not have expiry
             new_key.set_expiry(None)
+
+        # Send notifications that an object was copied
+        bucket = self.get_bucket(dest_bucket_name)
+        notifications.send_event(notifications.S3_OBJECT_CREATE_COPY, bucket, new_key)
 
     def put_bucket_acl(self, bucket_name, acl):
         bucket = self.get_bucket(bucket_name)

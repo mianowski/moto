@@ -1,6 +1,151 @@
 Moto Changelog
 ==============
 
+3.1.4
+-----
+Docker Digest for 3.1.4: _sha256:795eb8a1d966ef30c53f504e358afb23ec262e5ad1cba18d474096c0fba794bd_
+
+    General:
+        * Compatible with botocore 1.24.30.
+          The IOTData service in older versions of Moto is incompatible with botocore >= 1.24.30, due to the fact that AWS changed their URL endpoints. 
+
+    New Services:
+        * QuickSight:
+            * create_data_set()
+            * create_group()
+            * create_group_membership()
+            * create_ingestion()
+            * delete_group()
+            * delete_user()
+            * describe_group()
+            * describe_group_membership()
+            * describe_user()
+            * list_groups()
+            * list_group_memberships()
+            * list_users()
+            * register_user()
+            * update_group()
+            * describe_group()
+            * describe_group()
+            * describe_group()
+
+        * Rekognition:
+            * get_text_detection()
+            * start_text_detection()
+
+    New Methods:
+        * EC2:
+            * delete_launch_template()
+
+        * ECS:
+            * create_capacity_provider()
+            * delete_capacity_provider()
+            * describe_capacity_providers()
+
+    Miscellaneous:
+        * Autoscaling:put_scaling_policy() now supports the parameters MetricAggregationType, MinAdjustmentMagnitude, EstimatedInstanceWarmup, PredictiveScalingConfiguration
+        * Autoscaling:create_auto_scaling_group() now supports launch template versions '$Latest' and '$Default'
+        * RDS: Improved tagging support for Clusters and ClusterSnapshots
+
+
+3.1.3
+-----
+Docker Digest for 3.1.3: _sha256:d0716d84d376e7aafeb4a40a29d298725aa39e6553b64f55a6be1287e4bee80c_
+
+    New Methods:
+        * TimestreamWrite:
+            * list_tags_for_resource()
+            * tag_resource()
+            * untag_resource()
+
+    Miscellaneous:
+        * EC2:run_instances(): Fixed a bug when supplying the NetworkInterfaces.Groups-parameter
+        * Logs:delete_metric_filter(): Fixed a bug where the logGroupName-validator was too strict
+
+
+3.1.2
+-----
+Docker Digest for 3.1.2: _sha256:884923ae6449b2db64e6805ef82209fcc5aab4991024c495aea07a191257aa4d_
+
+    Known Bugs:
+        * EC2:run_instances(): This call will fail when supplying the NetworkInterfaces.Groups-parameter 
+
+    New Methods:
+        * ELB
+            * attach_load_balancer_to_subnets()
+            * detach_load_balancer_from_subnets()
+            * describe_load_balancer_policies()
+            * delete_load_balancer_policy()
+            * enable_availability_zones_for_load_balancer()
+            * disable_availability_zones_for_load_balancer()
+
+        * ELBv2:
+            * add_listener_certificates()
+            * describe_listener_certificates()
+            * remove_listener_certificates()
+
+        * Glue:
+            * get_job()
+            * get_job_run()
+            * start_job_run()
+
+    Miscellaneous:
+        * AWSLambda:add_permission() now supports the Qualifier-parameter
+        * ELB:create_load_balancer() now retrieves the subnets based on the AvailabilityZones-parameter
+        * ELB:create_load_balancer() now creates a default SecurityGroup, if none is provided
+        * ELBv2:create_load_balancer() now supports the SubnetMappings-parameter
+        * ELBv2:create_listener() now supports the AlpnPolicy-parameter
+        * ELBv2: Improved tagging support
+        * ELBv2: Exposes the TargetGroupStickinessConfig-attribute when describing a Action of type ForwardConfig
+
+
+3.1.1
+-----
+Docker Digest for 3.1.1: _sha256:e2b8145574e01d1630be307f418211e09e089b87d8d87b1ac69878a50d8dde0c_
+
+    New Methods:
+        * AWSLambda:
+            * create_alias()
+            * delete_alias()
+            * delete_layer_version()
+            * get_alias()
+            * get_layer_version()
+            * update_alias()
+
+        * EFS:
+            * create_access_point()
+            * delete_access_point()
+            * describe_access_points()
+            * describe_lifecycle_configuration()
+            * describe_mount_target_security_groups()
+            * list_tags_for_resource()
+            * modify_mount_target_security_groups()
+            * put_lifecycle_configuration()
+            * tag_resource()
+            * untag_resource()
+
+    Miscellaneous:
+        * AWSLambda: get_function now returns the parameters Tags, LastUpdateStatus, TracingConfig
+        * ELBV2:describe_tags() now supports ListenerRules.
+
+
+3.1.0
+-----
+Docker Digest for 3.1.0: _sha256:1656754cf4de441d85b08f584d9dcb095880d3bf250f05da26a03ff219d586c8_
+
+    General:
+        * Users of `mock_dynamodb2` should start using `mock_dynamodb` instead. 
+          The `mock_dynamodb`-decorator has been repurposed to mock the latest version of DynamoDB, making the behaviour equivalent to `mock_dynamodb2`. 
+          The `mock_dynamodb2`-decorator is now considered deprecated, and will be removed in the next major version.
+
+        * Similarly, users of the `mock_rds2` should start using `mock_rds` instead.
+          The `mock_rds`-decorator has been repurposed to mock the latest version of RDS, making the behaviour equivalent to `mock_rds2`.
+          The `mock_rds2`-decorator has also been deprecated, and will be removed in the next major version.
+
+    Internal Changes:
+        * We've upgraded our linting process to use Black 22.1.0, and have enabled more pylint rules.
+          Please continue to run `make lint` prior to creating a PR, to ensure any changes are formatted correctly. 
+
 3.0.7
 -----
 Docker Digest for 3.0.7: _sha256:4db9433e741de635606fd2d997e555c26f51fc82e69d5043d0d9de90bbade229_

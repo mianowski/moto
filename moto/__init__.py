@@ -53,7 +53,7 @@ mock_batch = lazy_load(".batch", "mock_batch")
 mock_budgets = lazy_load(".budgets", "mock_budgets")
 mock_cloudformation = lazy_load(".cloudformation", "mock_cloudformation")
 mock_cloudfront = lazy_load(".cloudfront", "mock_cloudfront")
-mock_cloudtrail = lazy_load(".cloudtrail", "mock_cloudtrail", boto3_name="cloudtrail")
+mock_cloudtrail = lazy_load(".cloudtrail", "mock_cloudtrail")
 mock_cloudwatch = lazy_load(".cloudwatch", "mock_cloudwatch")
 mock_codecommit = lazy_load(".codecommit", "mock_codecommit")
 mock_codepipeline = lazy_load(".codepipeline", "mock_codepipeline")
@@ -67,9 +67,11 @@ mock_datapipeline = lazy_load(".datapipeline", "mock_datapipeline")
 mock_datasync = lazy_load(".datasync", "mock_datasync")
 mock_dax = lazy_load(".dax", "mock_dax")
 mock_dms = lazy_load(".dms", "mock_dms")
-mock_ds = lazy_load(".ds", "mock_ds", boto3_name="ds")
-mock_dynamodb = lazy_load(".dynamodb", "mock_dynamodb", warn_repurpose=True)
-mock_dynamodb2 = lazy_load(".dynamodb2", "mock_dynamodb2", backend="dynamodb_backends2")
+mock_ds = lazy_load(".ds", "mock_ds")
+mock_dynamodb = lazy_load(".dynamodb", "mock_dynamodb")
+mock_dynamodb2 = lazy_load(
+    ".dynamodb", "mock_dynamodb", use_instead=("mock_dynamodb2", "mock_dynamodb")
+)
 mock_dynamodbstreams = lazy_load(".dynamodbstreams", "mock_dynamodbstreams")
 mock_elasticbeanstalk = lazy_load(
     ".elasticbeanstalk", "mock_elasticbeanstalk", backend="eb_backends"
@@ -122,12 +124,16 @@ mock_opsworks = lazy_load(".opsworks", "mock_opsworks")
 mock_organizations = lazy_load(".organizations", "mock_organizations")
 mock_pinpoint = lazy_load(".pinpoint", "mock_pinpoint")
 mock_polly = lazy_load(".polly", "mock_polly")
+mock_quicksight = lazy_load(".quicksight", "mock_quicksight")
 mock_ram = lazy_load(".ram", "mock_ram")
 mock_rds = lazy_load(".rds", "mock_rds")
 mock_rds2 = lazy_load(".rds", "mock_rds", use_instead=("mock_rds2", "mock_rds"))
 mock_redshift = lazy_load(".redshift", "mock_redshift")
 mock_redshiftdata = lazy_load(
     ".redshiftdata", "mock_redshiftdata", boto3_name="redshift-data"
+)
+mock_rekognition = lazy_load(
+    ".rekognition", "mock_rekognition", boto3_name="rekognition"
 )
 mock_resourcegroups = lazy_load(
     ".resourcegroups", "mock_resourcegroups", boto3_name="resource-groups"
@@ -193,7 +199,7 @@ mock_all = MockAll
 # logging.getLogger('boto').setLevel(logging.CRITICAL)
 
 __title__ = "moto"
-__version__ = "3.1.0.dev"
+__version__ = "3.1.5.dev"
 
 
 try:

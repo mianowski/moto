@@ -113,7 +113,7 @@ class Cluster:
         encryption_config=None,
     ):
         if encryption_config is None:
-            encryption_config = dict()
+            encryption_config = []
         if tags is None:
             tags = dict()
 
@@ -394,7 +394,7 @@ class EKSBackend(BaseBackend):
             )
         if not cluster.isActive():
             raise InvalidRequestException(
-                message=CLUSTER_NOT_READY_MSG.format(clusterName=cluster_name,)
+                message=CLUSTER_NOT_READY_MSG.format(clusterName=cluster_name)
             )
 
         _validate_fargate_profile_selectors(selectors)
@@ -459,7 +459,7 @@ class EKSBackend(BaseBackend):
             )
         if not cluster.isActive():
             raise InvalidRequestException(
-                message=CLUSTER_NOT_READY_MSG.format(clusterName=cluster_name,)
+                message=CLUSTER_NOT_READY_MSG.format(clusterName=cluster_name)
             )
         if launch_template:
             validate_launch_template_combination(disk_size, remote_access)

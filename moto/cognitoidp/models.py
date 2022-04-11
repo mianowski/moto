@@ -234,8 +234,7 @@ class CognitoIdpUserPoolAttribute(BaseModel):
         else:
             self.developer_only = False
         self.mutable = schema.get(
-            "Mutable",
-            CognitoIdpUserPoolAttribute.STANDARD_SCHEMA[self.name]["Mutable"],
+            "Mutable", CognitoIdpUserPoolAttribute.STANDARD_SCHEMA[self.name]["Mutable"]
         )
         self.required = schema.get(
             "Required",
@@ -1131,7 +1130,7 @@ class CognitoIdpBackend(BaseBackend):
     def _validate_auth_flow(
         self, auth_flow: str, valid_flows: typing.List[AuthFlow]
     ) -> AuthFlow:
-        """ validate auth_flow value and convert auth_flow to enum """
+        """validate auth_flow value and convert auth_flow to enum"""
 
         try:
             auth_flow = AuthFlow[auth_flow]
@@ -1304,11 +1303,11 @@ class CognitoIdpBackend(BaseBackend):
 
     def forgot_password(self, client_id, username):
         """The ForgotPassword operation is partially broken in AWS. If the input is 100% correct it works fine.
-            Otherwise you get semi-random garbage and HTTP 200 OK, for example:
-            - recovery for username which is not registered in any cognito pool
-            - recovery for username belonging to a different user pool than the client id is registered to
-            - phone-based recovery for a user without phone_number / phone_number_verified attributes
-            - same as above, but email / email_verified
+        Otherwise you get semi-random garbage and HTTP 200 OK, for example:
+        - recovery for username which is not registered in any cognito pool
+        - recovery for username belonging to a different user pool than the client id is registered to
+        - phone-based recovery for a user without phone_number / phone_number_verified attributes
+        - same as above, but email / email_verified
         """
         for user_pool in self.user_pools.values():
             if client_id in user_pool.clients:
@@ -1404,10 +1403,13 @@ class CognitoIdpBackend(BaseBackend):
         return resource_server
 
     def sign_up(self, client_id, username, password, attributes):
+        # This method may not be authenticated - which means we don't know which region the request was send to
+        # Let's cycle through all regions to find out which one contains our client_id
         user_pool = None
-        for p in self.user_pools.values():
-            if client_id in p.clients:
-                user_pool = p
+        for backend in cognitoidp_backends.values():
+            for p in backend.user_pools.values():
+                if client_id in p.clients:
+                    user_pool = p
         if user_pool is None:
             raise ResourceNotFoundError(client_id)
         elif user_pool._get_user(username):
@@ -1464,7 +1466,7 @@ class CognitoIdpBackend(BaseBackend):
         user_pool.users[user.username] = user
         return user
 
-    def confirm_sign_up(self, client_id, username, confirmation_code):
+    def confirm_sign_up(self, client_id, username):
         user_pool = None
         for p in self.user_pools.values():
             if client_id in p.clients:
@@ -1617,7 +1619,10 @@ class CognitoIdpBackend(BaseBackend):
         else:
             raise NotAuthorizedError(access_token)
 
-    def verify_software_token(self, access_token, user_code):
+    def verify_software_token(self, access_token):
+        """
+        The parameter UserCode has not yet been implemented
+        """
         for user_pool in self.user_pools.values():
             if access_token in user_pool.access_tokens:
                 _, username = user_pool.access_tokens[access_token]

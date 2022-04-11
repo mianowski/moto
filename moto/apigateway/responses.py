@@ -1,40 +1,21 @@
 import json
-from functools import wraps
 from urllib.parse import unquote
 
 from moto.utilities.utils import merge_multiple_dicts
 from moto.core.responses import BaseResponse
 from .models import apigateway_backends
-from .exceptions import (
-    ApiGatewayException,
-    InvalidRequestInput,
-)
+from .exceptions import InvalidRequestInput
 
 API_KEY_SOURCES = ["AUTHORIZER", "HEADER"]
 AUTHORIZER_TYPES = ["TOKEN", "REQUEST", "COGNITO_USER_POOLS"]
 ENDPOINT_CONFIGURATION_TYPES = ["PRIVATE", "EDGE", "REGIONAL"]
 
 
-def error_handler(f):
-    @wraps(f)
-    def _wrapper(*args, **kwargs):
-        try:
-            return f(*args, **kwargs)
-        except ApiGatewayException as e:
-            return e.code, e.get_headers(), e.get_body()
-
-    return _wrapper
-
-
 class APIGatewayResponse(BaseResponse):
     def error(self, type_, message, status=400):
         headers = self.response_headers or {}
         headers["X-Amzn-Errortype"] = type_
-        return (
-            status,
-            headers,
-            json.dumps({"__type": type_, "message": message}),
-        )
+        return (status, headers, json.dumps({"__type": type_, "message": message}))
 
     @property
     def backend(self):
@@ -110,7 +91,6 @@ class APIGatewayResponse(BaseResponse):
                 value = op["value"]
                 return self.__validate_api_key_source(value)
 
-    @error_handler
     def restapis_individual(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
         function_id = self.path.replace("/restapis/", "", 1).split("/")[0]
@@ -140,7 +120,6 @@ class APIGatewayResponse(BaseResponse):
                 json.dumps({"item": [resource.to_dict() for resource in resources]}),
             )
 
-    @error_handler
     def gateway_response(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
         if request.method == "PUT":
@@ -155,7 +134,6 @@ class APIGatewayResponse(BaseResponse):
         if request.method == "GET":
             return self.get_gateway_responses()
 
-    @error_handler
     def resource_individual(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
         function_id = self.path.replace("/restapis/", "", 1).split("/")[0]
@@ -170,7 +148,6 @@ class APIGatewayResponse(BaseResponse):
             resource = self.backend.delete_resource(function_id, resource_id)
         return 200, {}, json.dumps(resource.to_dict())
 
-    @error_handler
     def resource_methods(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
         url_path_parts = self.path.split("/")
@@ -302,7 +279,6 @@ class APIGatewayResponse(BaseResponse):
 
         return 200, {}, json.dumps(authorizer_response)
 
-    @error_handler
     def request_validators(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
         url_path_parts = self.path.split("/")
@@ -323,7 +299,6 @@ class APIGatewayResponse(BaseResponse):
             )
             return 200, {}, json.dumps(validator)
 
-    @error_handler
     def request_validator_individual(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
         url_path_parts = self.path.split("/")
@@ -343,7 +318,6 @@ class APIGatewayResponse(BaseResponse):
             )
             return 200, {}, json.dumps(validator)
 
-    @error_handler
     def authorizers(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
         url_path_parts = self.path.split("/")
@@ -362,7 +336,6 @@ class APIGatewayResponse(BaseResponse):
             return 202, {}, "{}"
         return 200, {}, json.dumps(authorizer_response)
 
-    @error_handler
     def restapis_stages(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
         url_path_parts = self.path.split("/")
@@ -413,7 +386,6 @@ class APIGatewayResponse(BaseResponse):
                     stage["tags"].pop(tag, None)
             return 200, {}, json.dumps({"item": ""})
 
-    @error_handler
     def stages(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
         url_path_parts = self.path.split("/")
@@ -433,7 +405,6 @@ class APIGatewayResponse(BaseResponse):
             return 202, {}, "{}"
         return 200, {}, json.dumps(stage_response)
 
-    @error_handler
     def integrations(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
         url_path_parts = self.path.split("/")
@@ -481,7 +452,6 @@ class APIGatewayResponse(BaseResponse):
 
         return 200, {}, json.dumps(integration_response)
 
-    @error_handler
     def integration_responses(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
         url_path_parts = self.path.split("/")
@@ -516,7 +486,6 @@ class APIGatewayResponse(BaseResponse):
             )
         return 200, {}, json.dumps(integration_response)
 
-    @error_handler
     def deployments(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
         function_id = self.path.replace("/restapis/", "", 1).split("/")[0]
@@ -533,7 +502,6 @@ class APIGatewayResponse(BaseResponse):
             )
             return 200, {}, json.dumps(deployment)
 
-    @error_handler
     def individual_deployment(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
         url_path_parts = self.path.split("/")
@@ -547,7 +515,6 @@ class APIGatewayResponse(BaseResponse):
             deployment = self.backend.delete_deployment(function_id, deployment_id)
             return 202, {}, json.dumps(deployment)
 
-    @error_handler
     def apikeys(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
 
@@ -560,7 +527,6 @@ class APIGatewayResponse(BaseResponse):
             apikeys_response = self.backend.get_api_keys(include_values=include_values)
             return 200, {}, json.dumps({"item": apikeys_response})
 
-    @error_handler
     def apikey_individual(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
 
@@ -592,7 +558,6 @@ class APIGatewayResponse(BaseResponse):
             return 200, {}, json.dumps({"item": usage_plans_response})
         return 200, {}, json.dumps(usage_plan_response)
 
-    @error_handler
     def usage_plan_individual(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
 
@@ -610,7 +575,6 @@ class APIGatewayResponse(BaseResponse):
             )
         return 200, {}, json.dumps(usage_plan_response)
 
-    @error_handler
     def usage_plan_keys(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
 
@@ -626,7 +590,6 @@ class APIGatewayResponse(BaseResponse):
             usage_plans_response = self.backend.get_usage_plan_keys(usage_plan_id)
             return 200, {}, json.dumps({"item": usage_plans_response})
 
-    @error_handler
     def usage_plan_key_individual(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
 
@@ -642,7 +605,6 @@ class APIGatewayResponse(BaseResponse):
             )
         return 200, {}, json.dumps(usage_plan_response)
 
-    @error_handler
     def domain_names(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
 
@@ -679,7 +641,6 @@ class APIGatewayResponse(BaseResponse):
             )
             return 200, {}, json.dumps(domain_name_resp)
 
-    @error_handler
     def domain_name_induvidual(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
 
@@ -702,7 +663,6 @@ class APIGatewayResponse(BaseResponse):
             return 404, {}, json.dumps({"error": msg})
         return 200, {}, json.dumps(domain_names)
 
-    @error_handler
     def models(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
         rest_api_id = self.path.replace("/restapis/", "", 1).split("/")[0]
@@ -730,7 +690,6 @@ class APIGatewayResponse(BaseResponse):
 
             return 200, {}, json.dumps(model)
 
-    @error_handler
     def model_induvidual(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
         url_path_parts = self.path.split("/")
@@ -741,7 +700,6 @@ class APIGatewayResponse(BaseResponse):
             model_info = self.backend.get_model(rest_api_id, model_name)
         return 200, {}, json.dumps(model_info)
 
-    @error_handler
     def base_path_mappings(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
 
@@ -757,11 +715,10 @@ class APIGatewayResponse(BaseResponse):
             stage = self._get_param("stage")
 
             base_path_mapping_resp = self.backend.create_base_path_mapping(
-                domain_name, rest_api_id, base_path, stage,
+                domain_name, rest_api_id, base_path, stage
             )
             return 201, {}, json.dumps(base_path_mapping_resp)
 
-    @error_handler
     def base_path_mapping_individual(self, request, full_url, headers):
 
         self.setup_class(request, full_url, headers)
@@ -785,7 +742,6 @@ class APIGatewayResponse(BaseResponse):
             )
         return 200, {}, json.dumps(base_path_mapping)
 
-    @error_handler
     def vpc_link(self, request, full_url, headers):
         self.setup_class(request, full_url, headers)
         url_path_parts = self.path.split("/")
@@ -834,19 +790,19 @@ class APIGatewayResponse(BaseResponse):
         rest_api_id = self.path.split("/")[-3]
         response_type = self.path.split("/")[-1]
         response = self.backend.get_gateway_response(
-            rest_api_id=rest_api_id, response_type=response_type,
+            rest_api_id=rest_api_id, response_type=response_type
         )
         return 200, {}, json.dumps(response)
 
     def get_gateway_responses(self):
         rest_api_id = self.path.split("/")[-2]
-        responses = self.backend.get_gateway_responses(rest_api_id=rest_api_id,)
+        responses = self.backend.get_gateway_responses(rest_api_id=rest_api_id)
         return 200, {}, json.dumps(dict(item=responses))
 
     def delete_gateway_response(self):
         rest_api_id = self.path.split("/")[-3]
         response_type = self.path.split("/")[-1]
         self.backend.delete_gateway_response(
-            rest_api_id=rest_api_id, response_type=response_type,
+            rest_api_id=rest_api_id, response_type=response_type
         )
         return 202, {}, json.dumps(dict())

@@ -8,10 +8,7 @@ from copy import copy
 
 import time
 
-try:
-    from urlparse import urlparse
-except ImportError:
-    from urllib.parse import urlparse
+from urllib.parse import urlparse
 import responses
 from moto.core import ACCOUNT_ID, BaseBackend, BaseModel, CloudFormationModel
 from .utils import create_id, to_path
@@ -155,7 +152,7 @@ class Integration(BaseModel, dict):
     def get_integration_response(self, status_code):
         result = self.get("integrationResponses", {}).get(status_code)
         if not result:
-            raise NoIntegrationResponseDefined(status_code)
+            raise NoIntegrationResponseDefined()
         return result
 
     def delete_integration_response(self, status_code):
@@ -600,7 +597,7 @@ class ApiKey(BaseModel, dict):
         name=None,
         description=None,
         enabled=False,
-        generateDistinctId=False,
+        generateDistinctId=False,  # pylint: disable=unused-argument
         value=None,
         stageKeys=None,
         tags=None,
@@ -608,10 +605,8 @@ class ApiKey(BaseModel, dict):
     ):
         super().__init__()
         self["id"] = create_id()
-        self["value"] = (
-            value
-            if value
-            else "".join(random.sample(string.ascii_letters + string.digits, 40))
+        self["value"] = value or "".join(
+            random.sample(string.ascii_letters + string.digits, 40)
         )
         self["name"] = name
         self["customerId"] = customerId
@@ -752,7 +747,7 @@ class RestAPI(CloudFormationModel):
 
     PROP_ID = "id"
     PROP_NAME = "name"
-    PROP_DESCRIPTON = "description"
+    PROP_DESCRIPTION = "description"
     PROP_VERSION = "version"
     PROP_BINARY_MEDIA_TYPES = "binaryMediaTypes"
     PROP_CREATED_DATE = "createdDate"
@@ -806,7 +801,7 @@ class RestAPI(CloudFormationModel):
         return {
             self.PROP_ID: self.id,
             self.PROP_NAME: self.name,
-            self.PROP_DESCRIPTON: self.description,
+            self.PROP_DESCRIPTION: self.description,
             self.PROP_VERSION: self.version,
             self.PROP_BINARY_MEDIA_TYPES: self.binaryMediaTypes,
             self.PROP_CREATED_DATE: self.create_date,
@@ -831,7 +826,7 @@ class RestAPI(CloudFormationModel):
             if operaton == self.OPERATION_REPLACE:
                 if to_path(self.PROP_NAME) in path:
                     self.name = value
-                if to_path(self.PROP_DESCRIPTON) in path:
+                if to_path(self.PROP_DESCRIPTION) in path:
                     self.description = value
                 if to_path(self.PROP_API_KEY_SOURCE) in path:
                     self.api_key_source = value
@@ -845,12 +840,12 @@ class RestAPI(CloudFormationModel):
             elif operaton == self.OPERATION_REMOVE:
                 if to_path(self.PROP_BINARY_MEDIA_TYPES) in path:
                     self.binaryMediaTypes.remove(value)
-                if to_path(self.PROP_DESCRIPTON) in path:
+                if to_path(self.PROP_DESCRIPTION) in path:
                     self.description = ""
 
     @classmethod
-    def has_cfn_attr(cls, attribute):
-        return attribute in ["RootResourceId"]
+    def has_cfn_attr(cls, attr):
+        return attr in ["RootResourceId"]
 
     def get_cfn_attribute(self, attribute_name):
         from moto.cloudformation.exceptions import UnformattedGetAttTemplateException
@@ -1221,7 +1216,7 @@ class APIGatewayBackend(BaseBackend):
             restApiId=api_id,
             ...,
             uri="http://httpbin.org/robots.txt",
-            integrationHttpMethod="GET",
+            integrationHttpMethod="GET"
         )
         deploy_url = f"https://{api_id}.execute-api.us-east-1.amazonaws.com/dev"
         requests.get(deploy_url).content.should.equal(b"a fake response")
@@ -1847,7 +1842,7 @@ class APIGatewayBackend(BaseBackend):
     def create_request_validator(self, restapi_id, name, body, params):
         restApi = self.get_rest_api(restapi_id)
         return restApi.create_request_validator(
-            name=name, validateRequestBody=body, validateRequestParameters=params,
+            name=name, validateRequestBody=body, validateRequestParameters=params
         )
 
     def get_request_validator(self, restapi_id, validator_id):

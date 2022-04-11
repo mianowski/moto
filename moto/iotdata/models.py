@@ -199,8 +199,8 @@ class IoTDataPlaneBackend(BaseBackend):
         thing.thing_shadow = new_shadow
         return thing.thing_shadow
 
-    def publish(self, topic, qos, payload):
+    def publish(self, topic, payload):
         self.published_payloads.append((topic, payload))
 
 
-iotdata_backends = BackendDict(IoTDataPlaneBackend, "iot-data")
+iotdata_backends = BackendDict(IoTDataPlaneBackend, "iot")

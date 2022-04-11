@@ -79,16 +79,24 @@ autoscaling
 - [ ] get_predictive_scaling_forecast
 - [ ] put_lifecycle_hook
 - [ ] put_notification_configuration
-- [ ] put_scaling_policy
+- [X] put_scaling_policy
 - [ ] put_scheduled_update_group_action
 - [ ] put_warm_pool
 - [ ] record_lifecycle_action_heartbeat
 - [X] resume_processes
 - [X] set_desired_capacity
 - [X] set_instance_health
+  
+        The ShouldRespectGracePeriod-parameter is not yet implemented
+        
+
 - [X] set_instance_protection
 - [ ] start_instance_refresh
 - [X] suspend_processes
 - [ ] terminate_instance_in_auto_scaling_group
 - [X] update_auto_scaling_group
+  
+        The parameter DefaultCooldown, PlacementGroup, TerminationPolicies are not yet implemented
+        
+
 
