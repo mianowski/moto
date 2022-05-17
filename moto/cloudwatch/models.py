@@ -20,7 +20,7 @@ from .exceptions import (
 from .utils import make_arn_for_dashboard, make_arn_for_alarm
 from dateutil import parser
 
-from moto.core import ACCOUNT_ID as DEFAULT_ACCOUNT_ID
+from moto.core import get_account_id
 from ..utilities.tagging_service import TaggingService
 
 _EMPTY_LIST = tuple()
@@ -40,6 +40,9 @@ class Dimension(object):
 
     def __ne__(self, item):  # Only needed on Py2; Py3 defines it implicitly
         return self != item
+
+    def __lt__(self, other):
+        return self.name < other.name and self.value < other.name
 
 
 class Metric(object):
@@ -126,7 +129,7 @@ class FakeAlarm(BaseModel):
     ):
         self.region_name = region_name
         self.name = name
-        self.alarm_arn = make_arn_for_alarm(region_name, DEFAULT_ACCOUNT_ID, name)
+        self.alarm_arn = make_arn_for_alarm(region_name, get_account_id(), name)
         self.namespace = namespace
         self.metric_name = metric_name
         self.metric_data_queries = metric_data_queries
@@ -237,7 +240,7 @@ class MetricDatum(BaseModel):
 class Dashboard(BaseModel):
     def __init__(self, name, body):
         # Guaranteed to be unique for now as the name is also the key of a dictionary where they are stored
-        self.arn = make_arn_for_dashboard(DEFAULT_ACCOUNT_ID, name)
+        self.arn = make_arn_for_dashboard(get_account_id(), name)
         self.name = name
         self.body = body
         self.last_modified = datetime.now()
@@ -478,6 +481,7 @@ class CloudWatchBackend(BaseBackend):
             query_ns = query["metric_stat._metric._namespace"]
             query_name = query["metric_stat._metric._metric_name"]
             delta = timedelta(seconds=int(query["metric_stat._period"]))
+            dimensions = self._extract_dimensions_from_get_metric_data_query(query)
             result_vals = []
             timestamps = []
             stat = query["metric_stat._stat"]
@@ -494,11 +498,20 @@ class CloudWatchBackend(BaseBackend):
                     for md in period_md
                     if md.namespace == query_ns and md.name == query_name
                 ]
+                if dimensions:
+                    query_period_data = [
+                        md
+                        for md in period_md
+                        if sorted(md.dimensions) == sorted(dimensions)
+                        and md.name == query_name
+                    ]
 
                 metric_values = [m.value for m in query_period_data]
 
                 if len(metric_values) > 0:
-                    if stat == "Average":
+                    if stat == "SampleCount":
+                        result_vals.append(len(metric_values))
+                    elif stat == "Average":
                         result_vals.append(sum(metric_values) / len(metric_values))
                     elif stat == "Minimum":
                         result_vals.append(min(metric_values))
@@ -678,6 +691,21 @@ class CloudWatchBackend(BaseBackend):
             return next_token, metrics[0:500]
         else:
             return None, metrics
+
+    def _extract_dimensions_from_get_metric_data_query(self, query):
+        dimensions = []
+        prefix = "metric_stat._metric._dimensions.member."
+        suffix_name = "._name"
+        suffix_value = "._value"
+        counter = 1
+
+        while query.get(f"{prefix}{counter}{suffix_name}") and counter <= 10:
+            name = query.get(f"{prefix}{counter}{suffix_name}")
+            value = query.get(f"{prefix}{counter}{suffix_value}")
+            dimensions.append(Dimension(name=name, value=value))
+            counter = counter + 1
+
+        return dimensions
 
 
 cloudwatch_backends = BackendDict(CloudWatchBackend, "cloudwatch")

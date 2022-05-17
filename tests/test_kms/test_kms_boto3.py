@@ -73,9 +73,9 @@ def test_create_key():
     key["KeyMetadata"]["CreationDate"].should.be.a(datetime)
     key["KeyMetadata"]["CustomerMasterKeySpec"].should.equal("SYMMETRIC_DEFAULT")
     key["KeyMetadata"]["Description"].should.equal("my key")
-    key["KeyMetadata"]["Enabled"].should.be.ok
+    key["KeyMetadata"]["Enabled"].should.equal(True)
     key["KeyMetadata"]["EncryptionAlgorithms"].should.equal(["SYMMETRIC_DEFAULT"])
-    key["KeyMetadata"]["KeyId"].should_not.be.empty
+    key["KeyMetadata"]["KeyId"].should.match("[-a-zA-Z0-9]+")
     key["KeyMetadata"]["KeyManager"].should.equal("CUSTOMER")
     key["KeyMetadata"]["KeyState"].should.equal("Enabled")
     key["KeyMetadata"]["KeyUsage"].should.equal("ENCRYPT_DECRYPT")
@@ -134,9 +134,9 @@ def test_describe_key(id_or_arn):
     response["KeyMetadata"]["CreationDate"].should.be.a(datetime)
     response["KeyMetadata"]["CustomerMasterKeySpec"].should.equal("SYMMETRIC_DEFAULT")
     response["KeyMetadata"]["Description"].should.equal("my key")
-    response["KeyMetadata"]["Enabled"].should.be.ok
+    response["KeyMetadata"]["Enabled"].should.equal(True)
     response["KeyMetadata"]["EncryptionAlgorithms"].should.equal(["SYMMETRIC_DEFAULT"])
-    response["KeyMetadata"]["KeyId"].should_not.be.empty
+    response["KeyMetadata"]["KeyId"].should.match("[-a-zA-Z0-9]+")
     response["KeyMetadata"]["KeyManager"].should.equal("CUSTOMER")
     response["KeyMetadata"]["KeyState"].should.equal("Enabled")
     response["KeyMetadata"]["KeyUsage"].should.equal("ENCRYPT_DECRYPT")
@@ -1041,8 +1041,8 @@ def test__delete_alias__raises_if_alias_is_not_found():
     )
 
 
-def sort(l):
-    return sorted(l, key=lambda d: d.keys())
+def sort(lst):
+    return sorted(lst, key=lambda d: d.keys())
 
 
 def _check_tags(key_id, created_tags, client):

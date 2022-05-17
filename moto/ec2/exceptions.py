@@ -258,6 +258,14 @@ class InvalidAMIIdError(EC2ClientError):
         )
 
 
+class UnvailableAMIIdError(EC2ClientError):
+    def __init__(self, ami_id):
+        super().__init__(
+            "InvalidAMIID.Unavailable",
+            "The image id '[{0}]' is no longer available".format(ami_id),
+        )
+
+
 class InvalidAMIAttributeItemValueError(EC2ClientError):
     def __init__(self, attribute, value):
         super().__init__(
@@ -575,6 +583,14 @@ class InvalidAvailabilityZoneError(EC2ClientError):
             "Subnets can currently only be created in the following availability zones: {1}.".format(
                 availability_zone_value, valid_availability_zones
             ),
+        )
+
+
+class AvailabilityZoneNotFromRegionError(EC2ClientError):
+    def __init__(self, availability_zone_value):
+        super().__init__(
+            "InvalidParameterValue",
+            "Invalid Availability Zone ({0})".format(availability_zone_value),
         )
 
 

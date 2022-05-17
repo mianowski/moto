@@ -172,16 +172,18 @@ class ELBV2Response(BaseResponse):
             actions=params["Actions"],
             tags=params.get("Tags"),
         )
+
         template = self.response_template(CREATE_RULE_TEMPLATE)
         return template.render(rules=rules)
 
     @amzn_request_id
     def create_target_group(self):
-        name = self._get_param("Name")
-        vpc_id = self._get_param("VpcId")
-        protocol = self._get_param("Protocol")
-        protocol_version = self._get_param("ProtocolVersion", "HTTP1")
-        port = self._get_param("Port")
+        params = self._get_params()
+        name = params.get("Name")
+        vpc_id = params.get("VpcId")
+        protocol = params.get("Protocol")
+        protocol_version = params.get("ProtocolVersion", "HTTP1")
+        port = params.get("Port")
         healthcheck_protocol = self._get_param("HealthCheckProtocol")
         healthcheck_port = self._get_param("HealthCheckPort")
         healthcheck_path = self._get_param("HealthCheckPath")
@@ -190,8 +192,9 @@ class ELBV2Response(BaseResponse):
         healthcheck_enabled = self._get_param("HealthCheckEnabled")
         healthy_threshold_count = self._get_param("HealthyThresholdCount")
         unhealthy_threshold_count = self._get_param("UnhealthyThresholdCount")
-        matcher = self._get_params().get("Matcher")
-        target_type = self._get_param("TargetType")
+        matcher = params.get("Matcher")
+        target_type = params.get("TargetType")
+        tags = params.get("Tags")
 
         target_group = self.elbv2_backend.create_target_group(
             name,
@@ -209,6 +212,7 @@ class ELBV2Response(BaseResponse):
             unhealthy_threshold_count=unhealthy_threshold_count,
             matcher=matcher,
             target_type=target_type,
+            tags=tags,
         )
 
         template = self.response_template(CREATE_TARGET_GROUP_TEMPLATE)
@@ -773,24 +777,7 @@ CREATE_RULE_TEMPLATE = """<CreateRuleResponse xmlns="http://elasticloadbalancing
         <Actions>
           {% for action in rules.actions %}
           <member>
-            <Type>{{ action["type"] }}</Type>
-            {% if action["type"] == "forward" and "forward_config" in action.data %}
-            <ForwardConfig>
-              <TargetGroups>
-                {% for target_group in action.data["forward_config"]["target_groups"] %}
-                <member>
-                  <TargetGroupArn>{{ target_group["target_group_arn"] }}</TargetGroupArn>
-                  <Weight>{{ target_group["weight"] }}</Weight>
-                </member>
-                {% endfor %}
-              </TargetGroups>
-            </ForwardConfig>
-            {% endif %}
-            {% if action["type"] == "forward" and "forward_config" not in action.data %}
-            <TargetGroupArn>{{ action["target_group_arn"] }}</TargetGroupArn>
-            {% elif action["type"] == "redirect" %}
-            <RedirectConfig>{{ action["redirect_config"] }}</RedirectConfig>
-            {% endif %}
+            {{ action.to_xml() }}
           </member>
           {% endfor %}
         </Actions>
@@ -1430,45 +1417,92 @@ DESCRIBE_TARGET_HEALTH_TEMPLATE = """<DescribeTargetHealthResponse xmlns="http:/
 SET_RULE_PRIORITIES_TEMPLATE = """<SetRulePrioritiesResponse xmlns="http://elasticloadbalancing.amazonaws.com/doc/2015-12-01/">
   <SetRulePrioritiesResult>
     <Rules>
+      {% for rule in rules %}
       <member>
-        <IsDefault>{{ "true" if rules.is_default else "false" }}</IsDefault>
+        <IsDefault>{{ "true" if rule.is_default else "false" }}</IsDefault>
         <Conditions>
-          {% for condition in rules.conditions %}
+          {% for condition in rule.conditions %}
           <member>
-            <Field>{{ condition["field"] }}</Field>
+            <Field>{{ condition["Field"] }}</Field>
+            {% if "Values" in condition %}
             <Values>
-              {% for value in condition["values"] %}
+              {% for value in condition["Values"] %}
               <member>{{ value }}</member>
               {% endfor %}
             </Values>
+            {% endif %}
+            {% if "HttpHeaderConfig" in condition %}
+            <HttpHeaderConfig>
+              <HttpHeaderName>{{ condition["HttpHeaderConfig"]["HttpHeaderName"] }}</HttpHeaderName>
+              <Values>
+                {% for value in condition["HttpHeaderConfig"]["Values"] %}
+                <member>{{ value }}</member>
+                {% endfor %}
+              </Values>
+            </HttpHeaderConfig>
+            {% endif %}
+            {% if "HttpRequestMethodConfig" in condition %}
+            <HttpRequestMethodConfig>
+              <Values>
+                {% for value in condition["HttpRequestMethodConfig"]["Values"] %}
+                <member>{{ value }}</member>
+                {% endfor %}
+              </Values>
+            </HttpRequestMethodConfig>
+            {% endif %}
+            {% if "QueryStringConfig" in condition %}
+            <QueryStringConfig>
+              <Values>
+                {% for value in condition["QueryStringConfig"]["Values"] %}
+                <member>
+                    <Key>{{ value["Key"] }}</Key>
+                    <Value>{{ value["Value"] }}</Value>
+                </member>
+                {% endfor %}
+              </Values>
+            </QueryStringConfig>
+            {% endif %}
+            {% if "SourceIpConfig" in condition %}
+            <SourceIpConfig>
+              <Values>
+                {% for value in condition["SourceIpConfig"]["Values"] %}
+                <member>{{ value }}</member>
+                {% endfor %}
+              </Values>
+            </SourceIpConfig>
+            {% endif %}
+            {% if "PathPatternConfig" in condition %}
+            <PathPatternConfig>
+              <Values>
+                {% for value in condition["PathPatternConfig"]["Values"] %}
+                <member>{{ value }}</member>
+                {% endfor %}
+              </Values>
+            </PathPatternConfig>
+            {% endif %}
+            {% if "HostHeaderConfig" in condition %}
+            <HostHeaderConfig>
+              <Values>
+                {% for value in condition["HostHeaderConfig"]["Values"] %}
+                <member>{{ value }}</member>
+                {% endfor %}
+              </Values>
+            </HostHeaderConfig>
+            {% endif %}
           </member>
           {% endfor %}
         </Conditions>
-        <Priority>{{ rules.priority }}</Priority>
-        <RuleArn>{{ rules.arn }}</RuleArn>
+        <Priority>{{ rule.priority }}</Priority>
+        <RuleArn>{{ rule.arn }}</RuleArn>
         <Actions>
-          {% for action in rules.actions %}
+          {% for action in rule.actions %}
           <member>
-            <Type>{{ action["type"] }}</Type>
-            {% if action["type"] == "forward" and "forward_config" in action.data %}
-            <ForwardConfig>
-              <TargetGroups>
-                {% for target_group in action.data["forward_config"]["target_groups"] %}
-                <member>
-                  <TargetGroupArn>{{ target_group["target_group_arn"] }}</TargetGroupArn>
-                  <Weight>{{ target_group["weight"] }}</Weight>
-                </member>
-                {% endfor %}
-              </TargetGroups>
-            </ForwardConfig>
-            {% endif %}
-            {% if action["type"] == "forward" and "forward_config" not in action.data %}
-            <TargetGroupArn>{{ action["target_group_arn"] }}</TargetGroupArn>
-            {% endif %}
+            {{ action.to_xml() }}
           </member>
           {% endfor %}
         </Actions>
       </member>
+      {% endfor %}
     </Rules>
   </SetRulePrioritiesResult>
   <ResponseMetadata>

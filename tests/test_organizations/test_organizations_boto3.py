@@ -144,6 +144,25 @@ def test_list_organizational_units_for_parent():
 
 
 @mock_organizations
+def test_list_organizational_units_pagination():
+    client = boto3.client("organizations", region_name="us-east-1")
+    client.create_organization(FeatureSet="ALL")
+    root_id = client.list_roots()["Roots"][0]["Id"]
+    for i in range(20):
+        name = "ou" + str(i)
+        client.create_organizational_unit(ParentId=root_id, Name=name)
+    response = client.list_organizational_units_for_parent(ParentId=root_id)
+    response.should_not.have.key("NextToken")
+    len(response["OrganizationalUnits"]).should.be.greater_than_or_equal_to(i)
+
+    paginator = client.get_paginator("list_organizational_units_for_parent")
+    page_iterator = paginator.paginate(MaxResults=5, ParentId=root_id)
+    for page in page_iterator:
+        len(page["OrganizationalUnits"]).should.be.lower_than_or_equal_to(5)
+    page["OrganizationalUnits"][-1]["Name"].should.contain("19")
+
+
+@mock_organizations
 def test_list_organizational_units_for_parent_exception():
     client = boto3.client("organizations", region_name="us-east-1")
     with pytest.raises(ClientError) as e:
@@ -171,6 +190,54 @@ def test_create_account():
     ]
     validate_create_account_status(create_status)
     create_status["AccountName"].should.equal(mockname)
+
+
+@mock_organizations
+def test_close_account_returns_nothing():
+    client = boto3.client("organizations", region_name="us-east-1")
+    client.create_organization(FeatureSet="ALL")
+    create_status = client.create_account(AccountName=mockname, Email=mockemail)[
+        "CreateAccountStatus"
+    ]
+    created_account_id = create_status["AccountId"]
+
+    resp = client.close_account(AccountId=created_account_id)
+
+    del resp["ResponseMetadata"]
+
+    assert resp == {}
+
+
+@mock_organizations
+def test_close_account_puts_account_in_suspended_status():
+    client = boto3.client("organizations", region_name="us-east-1")
+    client.create_organization(FeatureSet="ALL")
+    create_status = client.create_account(AccountName=mockname, Email=mockemail)[
+        "CreateAccountStatus"
+    ]
+    created_account_id = create_status["AccountId"]
+
+    client.close_account(AccountId=created_account_id)
+
+    account = client.describe_account(AccountId=created_account_id)["Account"]
+    account["Status"].should.equal("SUSPENDED")
+
+
+@mock_organizations
+def test_close_account_id_not_in_org_raises_exception():
+    client = boto3.client("organizations", region_name="us-east-1")
+    client.create_organization(FeatureSet="ALL")
+    uncreated_fake_account_id = "123456789101"
+
+    with pytest.raises(ClientError) as e:
+        client.close_account(AccountId=uncreated_fake_account_id)
+    ex = e.value
+    ex.operation_name.should.equal("CloseAccount")
+    ex.response["ResponseMetadata"]["HTTPStatusCode"].should.equal(400)
+    ex.response["Error"]["Code"].should.contain("AccountNotFoundException")
+    ex.response["Error"]["Message"].should.equal(
+        "You specified an account that doesn't exist."
+    )
 
 
 @mock_organizations
@@ -258,6 +325,28 @@ def test_list_accounts_for_parent():
     ]["AccountId"]
     response = client.list_accounts_for_parent(ParentId=root_id)
     account_id.should.be.within([account["Id"] for account in response["Accounts"]])
+
+
+@mock_organizations
+def test_list_accounts_for_parent_pagination():
+    client = boto3.client("organizations", region_name="us-east-1")
+    client.create_organization(FeatureSet="ALL")
+    root_id = client.list_roots()["Roots"][0]["Id"]
+    response = client.list_accounts_for_parent(ParentId=root_id)
+    response.should_not.have.key("NextToken")
+    num_existing_accounts = len(response["Accounts"])
+    for i in range(num_existing_accounts, 21):
+        name = mockname + str(i)
+        email = name + "@" + mockdomain
+        client.create_account(AccountName=name, Email=email)
+    response = client.list_accounts_for_parent(ParentId=root_id)
+    len(response["Accounts"]).should.be.greater_than_or_equal_to(i)
+
+    paginator = client.get_paginator("list_accounts_for_parent")
+    page_iterator = paginator.paginate(MaxResults=5, ParentId=root_id)
+    for page in page_iterator:
+        len(page["Accounts"]).should.be.lower_than_or_equal_to(5)
+    page["Accounts"][-1]["Name"].should.contain("20")
 
 
 @mock_organizations
@@ -430,7 +519,7 @@ def test_get_paginated_list_create_account_status():
     for createAccountStatus in createAccountStatuses:
         validate_create_account_status(createAccountStatus)
     next_token = response["NextToken"]
-    next_token.should_not.be.none
+    next_token.should_not.equal(None)
     response2 = client.list_create_account_status(NextToken=next_token)
     createAccountStatuses.extend(response2["CreateAccountStatuses"])
     createAccountStatuses.should.have.length_of(6)
@@ -2003,7 +2092,7 @@ def test_aiservices_opt_out_policy():
     summary["Name"].should.equal("ai-opt-out")
     summary["Description"].should.equal("Opt out of all AI services")
     summary["Type"].should.equal("AISERVICES_OPT_OUT_POLICY")
-    summary["AwsManaged"].should_not.be.ok
+    summary["AwsManaged"].should.equal(False)
     json.loads(response["Policy"]["Content"]).should.equal(ai_policy)
 
     # when

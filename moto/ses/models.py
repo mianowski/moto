@@ -132,7 +132,8 @@ class SESBackend(BaseBackend):
 
     def verify_email_identity(self, address):
         _, address = parseaddr(address)
-        self.addresses.append(address)
+        if address not in self.addresses:
+            self.addresses.append(address)
 
     def verify_email_address(self, address):
         _, address = parseaddr(address)
@@ -462,8 +463,8 @@ class SESBackend(BaseBackend):
         for receipt_rule in rule_set:
             if receipt_rule["name"] == rule_name:
                 return receipt_rule
-        else:
-            raise RuleDoesNotExist("Invalid Rule Name.")
+
+        raise RuleDoesNotExist("Invalid Rule Name.")
 
     def update_receipt_rule(self, rule_set_name, rule):
         rule_set = self.receipt_rule_set.get(rule_set_name)
@@ -519,6 +520,17 @@ class SESBackend(BaseBackend):
                 attributes_by_identity[identity] = self.identity_mail_from_domains.get(
                     identity
                 ) or {"behavior_on_mx_failure": "UseDefaultValue"}
+
+        return attributes_by_identity
+
+    def get_identity_verification_attributes(self, identities=None):
+        if identities is None:
+            identities = []
+
+        attributes_by_identity = {}
+        for identity in identities:
+            if identity in (self.domains + self.addresses):
+                attributes_by_identity[identity] = "Success"
 
         return attributes_by_identity
 
