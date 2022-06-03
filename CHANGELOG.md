@@ -1,6 +1,60 @@
 Moto Changelog
 ==============
 
+3.1.11
+-----
+Docker Digest for 3.1.11: _sha256:bb359c5e57e38534eb8e934757354277fff30598ca305d0f18f68ddfe4ce6359_
+
+    New Methods:
+        * GuardDuty:
+            * create_filter()
+            * delete_detector()
+            * delete_filter()
+            * enable_organization_admin_account()
+            * get_detector()
+            * get_filter()
+            * list_organization_admin_accounts()
+            * update_detector()
+            * update_filter()
+        * KMS:
+            * create_grant()
+            * list_grants()
+            * list_retirable_grants()
+            * retire_grant()
+            * revoke_grant()
+
+    Miscellaneous:
+        * EC2:describe_network_acls() now supports the `entry.egress`-filter
+        * EC2:run_instances() now supports validation for the KeyPair-parameter. This is disabled by default - set MOTO_ENABLE_KEYPAIR_VALIDATION to true to enable this.
+        * EC2:run_instances() now supports validation for the ImageId-parameter. This is disabled by default - set MOTO_ENABLE_AMI_VALIDATION to true to enable this.
+
+
+3.1.10
+-----
+Docker Digest for 3.1.10: _sha256:18c6367dbb843850a5b52bc2b74cde9fd2a03719da667aa01b7c80de26849fb6_
+
+    New Methods:
+        * APIGateway:
+            * import_rest_api()
+            * put_rest_api()
+        * Glue:
+            * get_tags()
+            * tag_resource()
+            * untag_resource()
+
+    Miscellaneous:
+        * APIGateway:put_integration() now supports the passthroughBehavior-parameter
+        * APIGatewayV2:create_authorizer() now supports the AuthorizerPayloadFormatVersion-parameter
+        * AWSLamba:publish_layer_version() now supports the CompatibleArchitectures-parameter
+        * DAX:create_cluster() now supports the ClusterEndpointEncryptionType-parameter
+        * EC2:describe_route_tables() now supports the filter `route.gateway-id`
+        * EC2:run_instances() now validates whether the Placement-parameter has a valid availabilty zone
+        * ECS:list_services() now supports the launchType-parameter
+        * ELB:describe_instance_health() now returns the OutOfService-status when appropriate
+        * Organizations:list_accounts_for_parent() now supports pagination
+        * Organizations:list_organizational_units_for_parent() now supports pagination
+
+
 3.1.9
 -----
 Docker Digest for 3.1.9: _sha256:eea31d2f99b2fef16cffb3ea86d21dd911647835a3182bedd8918074292ce552_
